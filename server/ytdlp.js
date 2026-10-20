@@ -48,7 +48,7 @@ export async function ensureYtdlp() {
   let version = await versionOf(BIN);
   if (!version && BIN !== LOCAL_BIN) { version = await versionOf(LOCAL_BIN); if (version) BIN = LOCAL_BIN; }
   if (!version) {
-    const url = `https://github.com/yt-dlp/yt-dlp/releases/latest/download/${releaseAsset()}`;
+    const url = `https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/download/${releaseAsset()}`;
     console.log(`yt-dlp not found – downloading ${url} → ${LOCAL_BIN}`);
     try {
       fs.mkdirSync(BIN_DIR, { recursive: true });
@@ -66,7 +66,7 @@ export async function ensureYtdlp() {
 }
 
 /** Updates the local binary in place (yt-dlp -U). Call from a cron/weekly. */
-export function updateYtdlp() { return new Promise((resolve) => { const p = spawn(BIN, ['-U']); p.on('error', () => resolve(false)); p.on('close', (c) => resolve(c === 0)); }); }
+export function updateYtdlp() { return new Promise((resolve) => { const p = spawn(BIN, ['--update-to', 'nightly']); p.on('error', () => resolve(false)); p.on('close', (c) => resolve(c === 0)); }); }
 const YT_HOSTS = ['youtube.com', 'youtu.be', 'youtube-nocookie.com', 'music.youtube.com'];
 /** ALLOW_YOUTUBE=false in .env turns YouTube off again (the Android app keeps it blocked regardless). */
 const ALLOW_YT = process.env.ALLOW_YOUTUBE !== 'false';

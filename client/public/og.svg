@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <radialGradient id="g" cx="30%" cy="0%" r="90%"><stop offset="0" stop-color="#143a3a"/><stop offset=".5" stop-color="#0b1322"/><stop offset="1" stop-color="#05080f"/></radialGradient>
+    <linearGradient id="m" x1="0" x2="1"><stop offset="0" stop-color="#2ee6b6"/><stop offset="1" stop-color="#27d0e0"/></linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#g)"/>
+  <circle cx="1000" cy="120" r="260" fill="#2ee6b6" opacity=".10"/>
+  <g transform="translate(90 110)">
+    <rect width="96" height="96" rx="22" fill="#111"/><circle cx="48" cy="46" r="27" fill="#FF6B00"/><circle cx="48" cy="46" r="22" fill="#111"/><path fill="#FF6B00" d="M44 32h8v14h9L48 59 35 46h9z"/><rect x="35" y="62" width="26" height="4" rx="2" fill="#FF8C1A"/>
+  </g>
+  <text x="210" y="178" font-family="Inter, Arial, sans-serif" font-size="44" font-weight="800" fill="#f1f5fa">Savely</text>
+  <text x="90" y="300" font-family="Inter, Arial, sans-serif" font-size="68" font-weight="800" fill="#f1f5fa">Free Online</text>
+  <text x="90" y="380" font-family="Inter, Arial, sans-serif" font-size="68" font-weight="800" fill="url(#m)">Video Downloader</text>
+  <text x="92" y="440" font-family="Inter, Arial, sans-serif" font-size="26" fill="#9aa7ba">Facebook · Instagram · TikTok · X · Vimeo · Dailymotion · Reddit</text>
+  <text x="92" y="480" font-family="Inter, Arial, sans-serif" font-size="26" fill="#9aa7ba">HD MP4 1080p · MP3 · No watermark · No login · Free Android app</text>
+  <rect x="90" y="530" width="260" height="54" rx="27" fill="url(#m)"/>
+  <text x="220" y="565" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#04221b">savely.app</text>
+</svg>

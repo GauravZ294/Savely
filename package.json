@@ -1,0 +1,31 @@
+{
+  "name": "savely-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Savely Video Downloader – website (React + Node + SQLite)",
+  "type": "module",
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "setup": "npm install && npm install --prefix client",
+    "dev": "concurrently -n server,client -c blue,green \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "node --watch server/index.js",
+    "dev:client": "npm run dev --prefix client",
+    "build": "npm run build --prefix client",
+    "start": "node server/index.js",
+    "postinstall": "node server/setup-ytdlp.js",
+    "ytdlp:update": "node server/setup-ytdlp.js --update"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "ffmpeg-static": "^5.2.0",
+    "nodemailer": "^10.1.1",
+    "sqlite3": "^6.0.1"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

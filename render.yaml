@@ -1,0 +1,31 @@
+# Render Blueprint – https://render.com/docs/blueprint-spec
+# Dashboard → New → Blueprint → pick this repo. Root directory must be "website" if the repo root is the Android project.
+services:
+  - type: web
+    name: savely-web
+    runtime: docker
+    plan: free
+    region: singapore          # closest free region to India; change to oregon/frankfurt if you prefer
+    rootDir: website
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CONTACT_TO
+        value: allinoneapps12@gmail.com
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "465"
+      - key: SMTP_USER
+        value: allinoneapps12@gmail.com
+      - key: SMTP_PASS
+        sync: false            # paste the Gmail App Password in the Render dashboard (never in git)
+      - key: ALLOW_YOUTUBE
+        value: "true"
+      - key: MAX_FILESIZE
+        value: 1G              # free instance has 512 MB RAM and a small disk; keep downloads bounded
+      - key: PLAY_URL
+        value: https://play.google.com/store/apps/details?id=com.savely.videodownloader

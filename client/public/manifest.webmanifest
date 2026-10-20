@@ -1,0 +1,10 @@
+{
+  "name": "Savely – Free Online Video Downloader",
+  "short_name": "Savely",
+  "description": "Download Facebook, Instagram, TikTok, X, Vimeo, Dailymotion and Reddit videos in HD MP4 or MP3.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070c16",
+  "theme_color": "#070c16",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

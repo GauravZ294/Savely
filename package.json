@@ -5,7 +5,7 @@
   "description": "Savely Video Downloader – website (React + Node + SQLite)",
   "type": "module",
   "engines": {
-    "node": ">=18.17"
+    "node": ">=22.0.0"
   },
   "scripts": {
     "setup": "npm install && npm install --prefix client",

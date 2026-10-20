@@ -76,7 +76,7 @@ const BLOCKED = ALLOW_YT ? ['googlevideo.com'] : [...YT_HOSTS, 'googlevideo.com'
 function commonArgs(url) {
   const a = [];
   if (process.env.YTDLP_COOKIES && fs.existsSync(process.env.YTDLP_COOKIES)) a.push('--cookies', process.env.YTDLP_COOKIES);
-  if (isYouTube(url)) a.push('--no-check-certificates', '--extractor-retries', '2');
+  if (isYouTube(url)) a.push('--js-runtimes', 'node', '--no-check-certificates', '--extractor-retries', '2');
   return a;
 }
 

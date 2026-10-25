@@ -8,3 +8,8 @@ bin
 *.log
 .git
 README.md
+
+# Account session cookies must never enter source control or image layers.
+*cookies*.txt
+*cookies*.json
+secrets/

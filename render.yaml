@@ -1,12 +1,13 @@
 # Render Blueprint – https://render.com/docs/blueprint-spec
-# Dashboard → New → Blueprint → pick this repo. Root directory must be "website" if the repo root is the Android project.
+# Repository root contains this website.
+# Dashboard → New → Blueprint → pick this repo. Root directory is "." for this repository.
 services:
   - type: web
     name: savely-web
     runtime: docker
     plan: free
     region: singapore          # closest free region to India; change to oregon/frankfurt if you prefer
-    rootDir: website
+    rootDir: .
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/health
     autoDeploy: true
@@ -25,6 +26,9 @@ services:
         sync: false            # paste the Gmail App Password in the Render dashboard (never in git)
       - key: ALLOW_YOUTUBE
         value: "true"
+      # Add youtube-cookies.txt under Render Environment > Secret Files.
+      - key: YTDLP_COOKIES
+        value: /etc/secrets/youtube-cookies.txt
       - key: MAX_FILESIZE
         value: 1G              # free instance has 512 MB RAM and a small disk; keep downloads bounded
       - key: PLAY_URL

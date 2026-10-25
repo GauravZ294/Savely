@@ -8,3 +8,8 @@ bin/
 !.env.example
 *.log
 .DS_Store
+
+# Account session cookies must never enter source control or image layers.
+*cookies*.txt
+*cookies*.json
+secrets/

@@ -63,7 +63,7 @@ app.get('/api/download', limit(10, 10 * 60_000), wrap(async (req, res) => {
   const id = String(req.query.id || 'best');
   const title = safeName(req.query.title);
   let child = null; let gone = false;
-  req.on('close', () => { gone = true; if (child && child.exitCode === null) child.kill('SIGKILL'); });
+  res.on('close', () => { gone = true; if (child && child.exitCode === null) child.kill('SIGKILL'); });
   const { file, dir, ext } = await download(url, id, (p) => { child = p; });
   if (gone) { fs.rmSync(dir, { recursive: true, force: true }); return; }
   run('INSERT INTO downloads (host, title, quality) VALUES (?, ?, ?)', [new URL(url).hostname, title, id]).catch(() => {});

@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { prepareCookies } from './cookies.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -21,10 +22,10 @@ async function resolveFfmpeg() {
 }
 const ffmpegArgs = () => (FFMPEG && FFMPEG !== 'ffmpeg' ? ['--ffmpeg-location', FFMPEG] : []);
 
-function versionOf(bin) {
+function versionOf(bin, flag = '--version') {
   return new Promise((resolve) => {
     try {
-      const p = spawn(bin, ['--version']);
+      const p = spawn(bin, [flag]);
       let out = '';
       p.stdout.on('data', (d) => { out += d; });
       p.on('error', () => resolve(null));
@@ -61,7 +62,7 @@ export async function ensureYtdlp() {
     } catch (e) { console.error('yt-dlp auto-install failed:', e.message); }
   }
   const ffBin = await resolveFfmpeg();
-  const ffmpeg = await versionOf(ffBin);
+  const ffmpeg = await versionOf(ffBin, '-version');
   return { bin: BIN, version, ffmpegBin: ffBin, ffmpeg: ffmpeg ? ffmpeg.split('\n')[0].replace(/^ffmpeg version\s*/, '').split(' ')[0] : null };
 }
 
@@ -75,8 +76,7 @@ const BLOCKED = ALLOW_YT ? ['googlevideo.com'] : [...YT_HOSTS, 'googlevideo.com'
 /** Extra yt-dlp args: cookies file (needed for YouTube from server IPs). Keep yt-dlp itself up to date – that matters more than flags. */
 function commonArgs(url) {
   const a = [];
-  if (process.env.YTDLP_COOKIES && fs.existsSync(process.env.YTDLP_COOKIES)) a.push('--cookies', process.env.YTDLP_COOKIES);
-  if (isYouTube(url)) a.push('--js-runtimes', 'node', '--no-check-certificates', '--extractor-retries', '2');
+  if (isYouTube(url)) a.push('--js-runtimes', 'node', '--extractor-retries', '2');
   return a;
 }
 
@@ -120,10 +120,19 @@ function runYtdlp(args, { timeoutMs }) {
   });
 }
 
+function requestCookies(url) {
+  if (!isYouTube(url)) return { args: [], cleanup() {} };
+  try { return prepareCookies(); }
+  catch { throw new HttpError(503, 'YouTube cookies are not configured correctly on this server. The site owner needs to check YTDLP_COOKIES.'); }
+}
+
 /** yt-dlp -J for one page. */
 export async function info(url) {
-  const out = await runYtdlp(['-J', '--no-playlist', '--no-warnings', '--socket-timeout', '15', ...commonArgs(url), url], { timeoutMs: 60_000 });
-  try { return JSON.parse(out); } catch { throw new HttpError(422, 'Could not read this video.'); }
+  const cookies = requestCookies(url);
+  try {
+    const out = await runYtdlp(['-J', '--no-playlist', '--no-warnings', '--socket-timeout', '15', ...commonArgs(url), ...cookies.args, url], { timeoutMs: 60_000 });
+    try { return JSON.parse(out); } catch { throw new HttpError(422, 'Could not read this video.'); }
+  } finally { cookies.cleanup(); }
 }
 
 /** Quality choices from yt-dlp formats, best first – mirrors Ytdl.options() in the Android app. */
@@ -164,20 +173,24 @@ export function specFor(id) {
  */
 export function download(url, id, onProcess = () => {}) {
   const { spec, ext } = specFor(id);
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'savely-'));
+  const cookies = requestCookies(url);
+  let dir;
+  try { dir = fs.mkdtempSync(path.join(os.tmpdir(), 'savely-')); }
+  catch (error) { cookies.cleanup(); throw error; }
   const args = ['-f', spec, '--no-playlist', '--no-warnings', '--no-mtime', '--socket-timeout', '20', '-o', path.join(dir, 'video.%(ext)s')];
   if (ext === 'mp3') args.push('-x', '--audio-format', 'mp3'); else args.push('--merge-output-format', 'mp4');
   if (process.env.MAX_FILESIZE) args.push('--max-filesize', process.env.MAX_FILESIZE);
-  args.push(...ffmpegArgs(), ...commonArgs(url), url);
+  args.push(...ffmpegArgs(), ...commonArgs(url), ...cookies.args, url);
   return new Promise((resolve, reject) => {
     const p = spawn(BIN, args, { stdio: ['ignore', 'ignore', 'pipe'] });
     onProcess(p);
     let err = '';
     p.stderr.on('data', (d) => { err += d; });
     const timer = setTimeout(() => p.kill('SIGKILL'), 30 * 60_000);
-    p.on('error', (e) => { clearTimeout(timer); fs.rmSync(dir, { recursive: true, force: true }); reject(e.code === 'ENOENT' ? new HttpError(503, 'The downloader (yt-dlp) is not installed on this server yet.') : e); });
+    p.on('error', (e) => { clearTimeout(timer); cookies.cleanup(); fs.rmSync(dir, { recursive: true, force: true }); reject(e.code === 'ENOENT' ? new HttpError(503, 'The downloader (yt-dlp) is not installed on this server yet.') : e); });
     p.on('close', (code) => {
       clearTimeout(timer);
+      cookies.cleanup();
       if (code !== 0) console.error('[yt-dlp dl]', err.trim().split('\n').slice(-3).join(' | '));
       const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter((n) => !n.endsWith('.part') && !n.endsWith('.ytdl')) : [];
       const file = files.map((n) => path.join(dir, n)).sort((a, b) => fs.statSync(b).size - fs.statSync(a).size)[0];

@@ -3,6 +3,8 @@ import { prepareCookies } from './cookies.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { HttpError } from './errors.js';
+export { HttpError } from './errors.js';
 
 import { fileURLToPath } from 'node:url';
 
@@ -82,16 +84,13 @@ function commonArgs(url) {
 
 export const ytdlpVersion = () => versionOf(BIN);
 
-export class HttpError extends Error {
-  constructor(status, message) { super(message); this.status = status; }
-}
-
 /** Validates a user-supplied link; returns the normalised URL or throws HttpError. */
 export function checkUrl(raw) {
   let u;
   try { u = new URL(String(raw || '').trim()); } catch { throw new HttpError(400, 'Enter a valid link starting with http:// or https://'); }
   if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new HttpError(400, 'Only http and https links are supported.');
-  const h = u.hostname.toLowerCase();
+  const h = u.hostname.toLowerCase().replace(/\.$/, '');
+  u.hostname = h;
   if (BLOCKED.some((b) => h === b || h.endsWith('.' + b))) throw new HttpError(400, ALLOW_YT ? "That link isn't supported." : 'YouTube downloads are disabled on this site.');
   if (h === 'localhost' || h.endsWith('.local') || /^(\d+\.){3}\d+$/.test(h) || h.includes(':')) throw new HttpError(400, "That link isn't supported.");
   if (isYouTube(u.toString()) && /[?&]list=/.test(u.search) && !/[?&]v=/.test(u.search)) throw new HttpError(400, 'Playlists are not supported — open one video and paste its link.');
@@ -128,6 +127,7 @@ function requestCookies(url) {
 
 /** yt-dlp -J for one page. */
 export async function info(url) {
+  if (isYouTube(url)) throw new HttpError(400, 'Use the YouTube preview page for this link.');
   const cookies = requestCookies(url);
   try {
     const out = await runYtdlp(['-J', '--no-playlist', '--no-warnings', '--socket-timeout', '15', ...commonArgs(url), ...cookies.args, url], { timeoutMs: 60_000 });
@@ -172,6 +172,7 @@ export function specFor(id) {
  * Caller must delete the directory. [onProcess] receives the child so the caller can kill it if the client leaves.
  */
 export function download(url, id, onProcess = () => {}) {
+  if (isYouTube(url)) throw new HttpError(400, 'Use the YouTube preview page for this link.');
   const { spec, ext } = specFor(id);
   const cookies = requestCookies(url);
   let dir;

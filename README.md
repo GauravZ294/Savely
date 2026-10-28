@@ -1,11 +1,11 @@
 # Savely – Video Downloader website
 
 Website for the **Savely** Android app ([Google Play](https://play.google.com/store/apps/details?id=com.savely.videodownloader)).
-Paste a Facebook / Instagram / TikTok / X / Vimeo / Dailymotion / Reddit link → pick a quality → download MP4 or MP3.
-YouTube is blocked, same as in the app.
+Paste a YouTube / Facebook / Instagram / TikTok / X / Vimeo / Dailymotion / Reddit link → pick a quality → download MP4 or MP3.
+YouTube links open a dedicated preview page and use `youtubei.js` directly; other platforms use yt-dlp.
 
 - **Client:** React 18 + Vite + React Router, plain CSS (dark theme, responsive, no UI framework)
-- **Server:** Node 18+ / Express, `yt-dlp` for link analysis and downloading, SQLite (`sqlite3`) for contact messages and a download counter, Nodemailer for the contact form
+- **Server:** Node 22+ / Express, `youtubei.js` for YouTube, `yt-dlp` for other platforms, FFmpeg for merging/conversion, SQLite (`sqlite3`) for contact messages and a download counter, Nodemailer for the contact form
 - Pages: Home, one page per platform (`/facebook`, `/instagram`, …), Contact, Privacy, Terms, 404
 - Extras: "What's new" card (once per browser), docked "Recent downloads" panel, Get-the-app banner with Play Store badge
 
@@ -13,7 +13,7 @@ YouTube is blocked, same as in the app.
 
 | Tool | Why | Install |
 |---|---|---|
-| Node.js ≥ 18.17 | server + build | https://nodejs.org |
+| Node.js ≥ 22 | server + build | https://nodejs.org |
 | yt-dlp | reads video qualities & downloads | **auto-installed by `npm install`** (postinstall downloads the official binary into `website/bin/`; the server also retries at startup). Update any time: `npm run ytdlp:update`. Manual: `brew install yt-dlp` (macOS) · `sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && sudo chmod +x /usr/local/bin/yt-dlp` (Linux) · `winget install yt-dlp` (Windows) |
 | ffmpeg | merges video+audio to MP4, makes MP3 | **bundled by the `ffmpeg-static` npm dependency** (downloaded during `npm install`; the server passes it to yt-dlp automatically). If that download is blocked on your network, install it manually – macOS: `brew install ffmpeg` (no Homebrew? `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"` first) · Ubuntu/Debian: `sudo apt update && sudo apt install -y ffmpeg` · Windows: `winget install Gyan.FFmpeg` |
 
@@ -37,7 +37,7 @@ Render's free tier runs a Docker container, which is exactly what this needs.
 
 1. Push the repo to GitHub.
 2. https://dashboard.render.com → **New → Blueprint** → select the repo. Render reads `website/render.yaml` and builds `website/Dockerfile` (Node + ffmpeg + yt-dlp, client pre-built).
-3. When asked, paste the Gmail App Password into `SMTP_PASS`. Everything else is pre-filled.
+3. Configure SMTP privately if contact email is needed. For YouTube deployment requirements, see [DEPLOY.md](DEPLOY.md), including the optional private proxy setting for blocked hosting IPs.
 4. First deploy takes ~5 min. Your site is at `https://savely-web.onrender.com` (rename the service for a different subdomain, or add your own domain under Settings → Custom Domains – free, with HTTPS).
 5. Put that URL into `client/src/data.js` (`SITE_URL`), `index.html`, `robots.txt`, `sitemap.xml`, commit, and Render redeploys automatically.
 
@@ -71,6 +71,9 @@ Or build the container: `docker build -t savely-web . && docker run -p 4000:4000
 |---|---|---|
 | `POST /api/analyze` | `{ url }` | `{ title, thumbnail, duration, uploader, host, options:[{id,label,ext,size}] }` |
 | `GET /api/download` | `url, id, title` | the file as an attachment (`id` = `v720`, `v1080`, `best`, `audio`) |
+| `POST /api/youtube/downloads` | `{ url, id }` | `202 { token }` for a background preparation |
+| `GET /api/youtube/downloads/:token` | – | `{ state, download }` or an error |
+| `GET /api/youtube/downloads/:token/file` | – | the prepared MP4 or MP3 attachment |
 | `POST /api/contact` | `{ name, email, message }` | `{ ok, emailed }` |
 | `GET /api/stats` | – | `{ downloads }` |
 | `GET /api/health` | – | `{ ok }` |
@@ -104,10 +107,19 @@ website/
 ## YouTube
 
 Enabled by default on the website (`ALLOW_YOUTUBE=true`); the Android app keeps YouTube blocked (Google Play policy).
-Two realities to plan for:
+Submitting a YouTube link opens `/download?url=...`. The direct JavaScript
+client reads the real formats; the best available MP4 is selected by default.
+HD video and audio are merged using FFmpeg. MP3 is converted from the audio
+track. Downloads prepare in a bounded background queue and are served from
+temporary files that expire after 15 minutes. YouTube never invokes yt-dlp.
 
-- **Bot checks.** From a server / datacenter IP YouTube often replies "Sign in to confirm you're not a bot". Fix: export cookies from a browser logged into a *throwaway* Google account (Netscape `cookies.txt`, e.g. the "Get cookies.txt LOCALLY" extension) and set `YTDLP_COOKIES=/path/cookies.txt`. Keep `yt-dlp` current (`yt-dlp -U`, ideally a weekly cron) — YouTube changes break old versions within days.
-- **Takedowns.** YouTube downloading is the feature most likely to bring DMCA/abuse complaints to your host. Keep the Terms page, answer takedown mail at `allinoneapps12@gmail.com`, and flip `ALLOW_YOUTUBE=false` if the host objects.
+Datacenter IPs can still receive "Sign in to confirm you're not a bot" or
+transfer refusals. Changing the library does not remove these checks. Set
+`YOUTUBE_PROXY_URL` privately if your deployment needs an accepted outbound IP;
+metadata and file bytes use the same proxy. Optional matching session values
+are `YOUTUBE_PO_TOKEN` and `YOUTUBE_VISITOR_DATA`. No YouTube cookie file is
+required by this implementation. See [DEPLOY.md](DEPLOY.md) and verify complete
+MP4 and MP3 transfers on Render after deployment. Access is not guaranteed.
 
 Not supported: playlists (paste a single video link), live streams, age-restricted videos.
 
@@ -128,4 +140,4 @@ Never commit real passwords. `.env` is git-ignored; `.env.example` is **committe
 
 ## Legal
 
-The site downloads only publicly available media the user links to, does not host content, blocks YouTube, and shows Terms/Privacy pages. Keep it that way – do not add title-search of movies/TV or adult platforms; that is what gets sites and Play Store apps taken down.
+The site accepts public video links and shows Terms/Privacy pages. Download only content you own or have permission to save. YouTube can be disabled with `ALLOW_YOUTUBE=false`.

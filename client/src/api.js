@@ -6,7 +6,29 @@ async function req(path, opts) {
   return data;
 }
 
-export const analyze = (url) => req('/api/analyze', { method: 'POST', body: JSON.stringify({ url }) });
+export const analyze = (url, signal) => req('/api/analyze', { method: 'POST', body: JSON.stringify({ url }), signal });
+
+export function isYouTubeLink(raw) {
+  try {
+    const h = new URL(raw).hostname.toLowerCase().replace(/\.$/, '');
+    return ['youtube.com', 'youtu.be', 'youtube-nocookie.com'].some((domain) => h === domain || h.endsWith(`.${domain}`));
+  } catch { return false; }
+}
+
+export async function prepareYouTubeDownload(url, id, signal) {
+  const { token } = await req('/api/youtube/downloads', { method: 'POST', body: JSON.stringify({ url, id }), signal });
+  while (!signal.aborted) {
+    const status = await req(`/api/youtube/downloads/${token}`, { signal });
+    if (status.state === 'ready') return status.download;
+    await new Promise((resolve, reject) => {
+      const abort = () => { clearTimeout(timer); reject(new DOMException('Cancelled', 'AbortError')); };
+      const timer = setTimeout(() => { signal.removeEventListener('abort', abort); resolve(); }, 1500);
+      signal.addEventListener('abort', abort, { once: true });
+      if (signal.aborted) abort();
+    });
+  }
+  throw new DOMException('Cancelled', 'AbortError');
+}
 export const sendContact = (body) => req('/api/contact', { method: 'POST', body: JSON.stringify(body) });
 export const stats = () => req('/api/stats').catch(() => ({ downloads: 0 }));
 export const downloadUrl = (url, id, title) => `/api/download?${new URLSearchParams({ url, id, title })}`;

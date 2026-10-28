@@ -5,11 +5,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { init, run, get } from './db.js';
-import { checkUrl, info, options, download, safeName, ensureYtdlp, HttpError } from './ytdlp.js';
+import { checkUrl, info, options, download, safeName, ensureYtdlp, HttpError, isYouTube } from './ytdlp.js';
+import { analyzeYouTube, youtubeId } from './youtube.js';
+import { createYouTubeJobs } from './youtube-jobs.js';
 import { sendContact } from './mail.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
+const youtubeJobs = createYouTubeJobs();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '32kb' }));
@@ -38,11 +41,13 @@ app.get('/api/config', (_req, res) => res.json({
   playUrl: process.env.PLAY_URL || 'https://play.google.com/store/apps/details?id=com.savely.videodownloader',
   contactEmail: process.env.CONTACT_TO || 'allinoneapps12@gmail.com',
   youtube: process.env.ALLOW_YOUTUBE !== 'false',
+  youtubeProvider: 'youtubei.js',
 }));
 
 /** POST /api/analyze {url} → title, thumbnail, duration, uploader, options[] */
 app.post('/api/analyze', limit(20, 10 * 60_000), wrap(async (req, res) => {
   const url = checkUrl(req.body?.url);
+  if (isYouTube(url)) return res.json(await analyzeYouTube(url));
   const meta = await info(url);
   const opts = options(meta);
   if (!opts.length) throw new HttpError(422, 'No downloadable video was found on this page.');
@@ -56,6 +61,38 @@ app.post('/api/analyze', limit(20, 10 * 60_000), wrap(async (req, res) => {
     options: opts,
   });
 }));
+
+app.post('/api/youtube/downloads', limit(10, 10 * 60_000), wrap(async (req, res) => {
+  const url = checkUrl(req.body?.url);
+  const videoId = youtubeId(url);
+  const quality = String(req.body?.id || '');
+  if (!/^(audio|v\d{2,4})$/.test(quality)) throw new HttpError(400, 'Unknown YouTube quality.');
+  const token = youtubeJobs.create(`https://www.youtube.com/watch?v=${videoId}`, quality);
+  res.status(202).json({ token });
+}));
+
+app.get('/api/youtube/downloads/:token', (req, res, next) => {
+  try {
+    const job = youtubeJobs.get(req.params.token);
+    res.set('Cache-Control', 'no-store');
+    if (job.state === 'failed') throw job.error;
+    res.json({ state: job.state, download: job.state === 'ready' ? `/api/youtube/downloads/${job.token}/file` : null });
+  } catch (error) { next(error); }
+});
+
+app.get('/api/youtube/downloads/:token/file', (req, res, next) => {
+  try {
+    const job = youtubeJobs.get(req.params.token);
+    if (job.state !== 'ready') throw new HttpError(409, 'Your file is still being prepared.');
+    job.readers++;
+    res.set('Cache-Control', 'private, no-store');
+    res.download(job.result.file, `${safeName(job.result.title)}.${job.result.ext}`, (error) => {
+      job.readers--;
+      if (!error) run('INSERT INTO downloads (host, title, quality) VALUES (?, ?, ?)', ['youtube.com', job.result.title, job.quality]).catch(() => {});
+      if (error && !res.headersSent) next(error);
+    });
+  } catch (error) { next(error); }
+});
 
 /** GET /api/download?url=&id=&title= → the file (Content-Disposition: attachment) */
 app.get('/api/download', limit(10, 10 * 60_000), wrap(async (req, res) => {
@@ -100,6 +137,7 @@ if (fs.existsSync(dist)) {
 
 // ---------------------------------------------------------------- errors
 app.use((err, _req, res, _next) => {
+  if (res.headersSent || res.destroyed) return;
   const known = err instanceof HttpError;
   const status = known ? err.status : 500;
   if (!known || status >= 500) console.error('[api]', err);
@@ -110,8 +148,9 @@ const port = Number(process.env.PORT || 4000);
 const host = process.env.HOST || '0.0.0.0';
 init().then(() => app.listen(port, host, async () => {
   console.log(`Savely web server → http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
+  console.log('YouTube: direct JavaScript client ready (no yt-dlp or cookie file).');
   const t = await ensureYtdlp();
-  console.log(t.version ? `yt-dlp ${t.version} ready (${t.bin})${process.env.YTDLP_COOKIES ? ' · cookies: ' + process.env.YTDLP_COOKIES : ''}`
+  console.log(t.version ? `Other platforms: yt-dlp ${t.version} ready (${t.bin})`
     : '!! yt-dlp unavailable and auto-download failed. Install it: macOS `brew install yt-dlp` · Linux `sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && sudo chmod +x /usr/local/bin/yt-dlp` · or set YTDLP_PATH in .env');
   console.log(t.ffmpeg ? `ffmpeg ${t.ffmpeg} ready (${t.ffmpegBin})` : '!! ffmpeg NOT found – 1080p/720p merging and MP3 will fail. Run `npm install` again (ffmpeg-static downloads it) or install: macOS `brew install ffmpeg` · Ubuntu/Debian `sudo apt install -y ffmpeg` · Windows `winget install Gyan.FFmpeg`');
 }))

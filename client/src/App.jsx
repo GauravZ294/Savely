@@ -9,6 +9,7 @@ import { Queue, WhatsNew } from './components/Overlays.jsx';
 import Home from './pages/Home.jsx';
 import Platform from './pages/Platform.jsx';
 import Contact from './pages/Contact.jsx';
+import Download from './pages/Download.jsx';
 import { NotFound, Privacy, Terms } from './pages/Legal.jsx';
 import { getQueue } from './api.js';
 
@@ -31,6 +32,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/download" element={<Download />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/404" element={<NotFound />} />

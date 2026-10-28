@@ -447,3 +447,9 @@ main { position: relative; z-index: 1; }
   .search .btn { width: 42px; padding: 0; }
   .stats { grid-template-columns: 1fr; }
 }
+.youtube-player { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; }
+.preview-play { position: absolute; inset: 0; display: grid; place-items: center; width: 100%; height: 100%; background: #0003; border: 0; color: white; cursor: pointer; }
+.preview-play svg { width: 56px; height: 56px; padding: 12px; border-radius: 50%; background: #111b; }
+.download-page h1 { max-width: 900px; font-size: clamp(30px, 5vw, 54px); }
+.download-page .analyzer { margin-top: 28px; }
+.download-page .eyebrow { display: flex; width: fit-content; }

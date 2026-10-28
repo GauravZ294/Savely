@@ -18,7 +18,7 @@ export const SEO = {
     title: 'Contact Savely – Support, Feedback & Copyright Requests | Gaurav Zalavadiya',
     description: 'Contact the Savely video downloader team for support, bug reports, feature requests or DMCA / copyright takedown. Replies from the developer, Gaurav Zalavadiya.',
   },
-  privacy: { title: 'Privacy Policy – Savely Video Downloader', description: 'How the Savely website and Android app handle your data: no accounts, no tracking cookies, files deleted after download.' },
+  privacy: { title: 'Privacy Policy – Savely Video Downloader', description: 'How the Savely website and Android app handle your data: no accounts, no tracking cookies, and temporary download files.' },
   terms: { title: 'Terms of Use – Savely Video Downloader', description: 'Terms for using the Savely online video downloader and Android app: permitted use, copyright, supported platforms, disclaimers.' },
 };
 

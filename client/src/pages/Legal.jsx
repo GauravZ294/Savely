@@ -19,7 +19,8 @@ export function Privacy() {
   return (
     <Page title="Privacy policy" seo={SEO.privacy} path="/privacy">
       <h2>What the website collects</h2>
-      <p>When you analyze or download a video, the link you paste is sent to our server so it can read the video's qualities and fetch the file for you. We keep an anonymous counter (site name, quality, time) to see which platforms are used; we do not store the link itself with any identifier, and files are deleted from the server as soon as they have been sent to you.</p>
+      <p>When you analyze or download a video, the link you paste is sent to our server so it can read the video's qualities and fetch the file for you. We keep a download history (site name, video title, quality and time) to count usage. YouTube links and preparation details are held temporarily while your file is prepared. Prepared YouTube files expire after about 15 minutes; an active transfer can finish before its file is deleted. Other download files are deleted after being sent.</p>
+      <p>YouTube thumbnails load from YouTube, and playing the optional embedded preview connects your browser to YouTube. YouTube's privacy policy applies to those requests.</p>
       <p>The contact form stores the name, email and message you send so we can reply, and forwards them to {CONTACT_EMAIL}. Your "recent downloads" list lives only in your browser's local storage.</p>
       <h2>What the Android app collects</h2>
       <p>The app runs entirely on your phone. Videos are resolved and downloaded by your device, using the cookies of the sites you log in to inside the app's browser; those cookies never leave your phone. The app uses Firebase Analytics for anonymous usage events (screens opened, buttons tapped, sites opened, download started) to improve the app. No account, no personal data, no ads.</p>

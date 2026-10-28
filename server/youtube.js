@@ -52,7 +52,10 @@ async function getSession() {
     session = Innertube.create({
       cache: new UniversalCache(false),
       fetch: youtubeFetch,
-      generate_session_locally: true,
+      // Retrieve a real visitor session. Locally generated visitor data can
+      // trigger verification even when this IP can otherwise fetch the video.
+      generate_session_locally: false,
+      enable_session_cache: false,
       po_token: process.env.YOUTUBE_PO_TOKEN || undefined,
       visitor_data: process.env.YOUTUBE_VISITOR_DATA || undefined,
     }).catch((e) => { session = null; throw e; });
@@ -163,6 +166,7 @@ export async function saveFormat(format, player, file, budget, signal, transport
     target.searchParams.set('range', `${start}-${end}`);
     const response = await transport(target, { signal, redirect: 'error', headers: { 'User-Agent': 'com.google.android.apps.youtube.vr.oculus/1.65.10 (Linux; U; Android 12; en_US; Quest 3 Build/SQ3A.220605.009.A1) gzip', Origin: 'https://www.youtube.com', Referer: 'https://www.youtube.com/' } });
     if (!response.ok || !response.body) {
+      console.warn('[youtube transfer] upstream status:', response.status);
       await response.body?.cancel();
       throw new HttpError(503, 'YouTube refused the video transfer. Please try again later.');
     }
